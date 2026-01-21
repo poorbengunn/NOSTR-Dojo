@@ -89,8 +89,8 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
     bob = generateKeypair();
     mallory = generateKeypair();
     
-    // Publish schema
-    schemaRef = `30100:${citadel.pubkey}:${SCHEMA_ID}`;
+    // Publish schema (using relocated kind 30300)
+    schemaRef = `30300:${citadel.pubkey}:${SCHEMA_ID}`;
     const schemaEvent = createSchemaEvent(citadel, SCHEMA_ID, trainingSchema);
     store.saveEvent(schemaEvent);
   });
@@ -138,7 +138,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       );
       store.saveEvent(seanCred);
       
-      // Now Sean can issue to Alice
+      // Now Sean can issue to Alice (using relocated kind 30301)
       const aliceCred = createCredentialEvent(
         sean,
         alice.pubkey,
@@ -147,7 +147,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
         'alice-instructor-2026',
         {
           expiryDays: 365,
-          chainRef: `30101:${sean.pubkey}:sean-director-2026`,
+          chainRef: `30301:${sean.pubkey}:sean-director-2026`,
         }
       );
       store.saveEvent(aliceCred);
@@ -169,7 +169,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       
       const aliceCred = createCredentialEvent(
         sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30101:${sean.pubkey}:sean-director-2026` }
+        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
       );
       store.saveEvent(aliceCred);
       
@@ -182,7 +182,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
         'bob-trainee-2026',
         {
           expiryDays: 180,
-          chainRef: `30101:${alice.pubkey}:alice-instructor-2026`,
+          chainRef: `30301:${alice.pubkey}:alice-instructor-2026`,
         }
       );
       store.saveEvent(bobCred);
@@ -206,13 +206,13 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       
       const aliceCred = createCredentialEvent(
         sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30101:${sean.pubkey}:sean-director-2026` }
+        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
       );
       store.saveEvent(aliceCred);
       
       const bobCred = createCredentialEvent(
         alice, bob.pubkey, schemaRef, 'trainee', 'bob-trainee-2026',
-        { chainRef: `30101:${alice.pubkey}:alice-instructor-2026` }
+        { chainRef: `30301:${alice.pubkey}:alice-instructor-2026` }
       );
       store.saveEvent(bobCred);
       
@@ -223,7 +223,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
         schemaRef,
         'trainee',
         'mallory-trainee-2026',
-        { chainRef: `30101:${bob.pubkey}:bob-trainee-2026` }
+        { chainRef: `30301:${bob.pubkey}:bob-trainee-2026` }
       );
       store.saveEvent(malloryCred);
       
@@ -244,7 +244,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       
       const aliceCred = createCredentialEvent(
         sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30101:${sean.pubkey}:sean-director-2026` }
+        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
       );
       store.saveEvent(aliceCred);
       
@@ -255,7 +255,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
         schemaRef,
         'course-director',
         'bob-fake-director',
-        { chainRef: `30101:${alice.pubkey}:alice-instructor-2026` }
+        { chainRef: `30301:${alice.pubkey}:alice-instructor-2026` }
       );
       store.saveEvent(badCred);
       
@@ -318,10 +318,10 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       );
       store.saveEvent(cred);
       
-      // Renew it
+      // Renew it (using relocated kind 30301 in reference)
       const renewal = createRenewalEvent(
         citadel,
-        `30101:${citadel.pubkey}:sean-renewed`,
+        `30301:${citadel.pubkey}:sean-renewed`,
         365, // New expiry: 365 days from now
         now
       );
@@ -355,7 +355,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
         'instructor',
         'alice-invalid',
         {
-          chainRef: `30101:${sean.pubkey}:sean-short-lived`,
+          chainRef: `30301:${sean.pubkey}:sean-short-lived`,
           timestamp: daysAgo(10), // Issued 10 days ago (after Sean's expired)
         }
       );
@@ -381,10 +381,10 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       );
       store.saveEvent(cred);
       
-      // Revoke it
+      // Revoke it (using relocated kind 30301 in reference)
       const revocation = createRevocationEvent(
         citadel,
-        `30101:${citadel.pubkey}:sean-revoked`,
+        `30301:${citadel.pubkey}:sean-revoked`,
         'misconduct'
       );
       store.saveEvent(revocation);
@@ -406,14 +406,14 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       
       const aliceCred = createCredentialEvent(
         sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30101:${sean.pubkey}:sean-director-2026` }
+        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
       );
       store.saveEvent(aliceCred);
       
       // Root revokes Alice's credential directly
       const revocation = createRevocationEvent(
         citadel,
-        `30101:${sean.pubkey}:alice-instructor-2026`,
+        `30301:${sean.pubkey}:alice-instructor-2026`,
         'fraud'
       );
       store.saveEvent(revocation);
@@ -438,7 +438,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       // 2. Sean certifies Alice as Instructor
       const aliceInstructor = createCredentialEvent(
         sean, alice.pubkey, schemaRef, 'instructor', 'alice-inst-001',
-        { chainRef: `30101:${sean.pubkey}:sean-cd-001` }
+        { chainRef: `30301:${sean.pubkey}:sean-cd-001` }
       );
       store.saveEvent(aliceInstructor);
       results.push(`Alice certified as Instructor: ${verifier.verify(aliceInstructor).status}`);
@@ -446,7 +446,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       // 3. Alice certifies Bob as Trainee (completes course)
       const bobTrainee = createCredentialEvent(
         alice, bob.pubkey, schemaRef, 'trainee', 'bob-trainee-001',
-        { chainRef: `30101:${alice.pubkey}:alice-inst-001`, expiryDays: 180 }
+        { chainRef: `30301:${alice.pubkey}:alice-inst-001`, expiryDays: 180 }
       );
       store.saveEvent(bobTrainee);
       results.push(`Bob certified as Trainee: ${verifier.verify(bobTrainee).status}`);

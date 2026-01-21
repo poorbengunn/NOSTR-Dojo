@@ -98,8 +98,8 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
     irrigationActuator = generateKeypair();
     rogueDevice = generateKeypair();
     
-    // Publish schema
-    schemaRef = `30100:${citadel.pubkey}:${SCHEMA_ID}`;
+    // Publish schema (using relocated kind 30300)
+    schemaRef = `30300:${citadel.pubkey}:${SCHEMA_ID}`;
     const schemaEvent = createSchemaEvent(citadel, SCHEMA_ID, iotSchema);
     store.saveEvent(schemaEvent);
   });
@@ -138,14 +138,14 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       );
       store.saveEvent(controllerCred);
       
-      // Provision sensor
+      // Provision sensor (using relocated kind 30301)
       const sensorCred = createCredentialEvent(
         bryncochController,
         tempSensor01.pubkey,
         schemaRef,
         'sensor',
         'temp-sensor-001',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(sensorCred);
       
@@ -168,7 +168,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
         schemaRef,
         'gateway',
         'gateway-001',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(gatewayCred);
       
@@ -179,7 +179,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
         schemaRef,
         'sensor',
         'temp-sensor-001',
-        { chainRef: `30101:${gateway01.pubkey}:gateway-001` }
+        { chainRef: `30301:${gateway01.pubkey}:gateway-001` }
       );
       store.saveEvent(sensorCred);
       
@@ -203,7 +203,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const sensor1Cred = createCredentialEvent(
         bryncochController, tempSensor01.pubkey, schemaRef,
         'sensor', 'temp-sensor-001',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(sensor1Cred);
       
@@ -214,7 +214,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
         schemaRef,
         'sensor',
         'temp-sensor-002',
-        { chainRef: `30101:${tempSensor01.pubkey}:temp-sensor-001` }
+        { chainRef: `30301:${tempSensor01.pubkey}:temp-sensor-001` }
       );
       store.saveEvent(badCred);
       
@@ -247,7 +247,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const gatewayCred = createCredentialEvent(
         bryncochController, gateway01.pubkey, schemaRef,
         'gateway', 'gateway-001',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(gatewayCred);
       
@@ -258,7 +258,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
         schemaRef,
         'site-controller',
         'fake-controller',
-        { chainRef: `30101:${gateway01.pubkey}:gateway-001` }
+        { chainRef: `30301:${gateway01.pubkey}:gateway-001` }
       );
       store.saveEvent(badCred);
       
@@ -279,14 +279,14 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const oldSensorCred = createCredentialEvent(
         bryncochController, tempSensor01.pubkey, schemaRef,
         'sensor', 'temp-sensor-001',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(oldSensorCred);
       
       // Sensor fails, needs replacement - revoke old
       const revocation = createRevocationEvent(
         bryncochController,
-        `30101:${bryncochController.pubkey}:temp-sensor-001`,
+        `30301:${bryncochController.pubkey}:temp-sensor-001`,
         'superseded'
       );
       store.saveEvent(revocation);
@@ -295,7 +295,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const newSensorCred = createCredentialEvent(
         bryncochController, tempSensor02.pubkey, schemaRef,
         'sensor', 'temp-sensor-001-replacement',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(newSensorCred);
       
@@ -321,7 +321,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const sensorCred = createCredentialEvent(
         bryncochController, tempSensor01.pubkey, schemaRef,
         'sensor', 'temp-sensor-001',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-controller-001` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-controller-001` }
       );
       store.saveEvent(sensorCred);
       
@@ -331,7 +331,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
         created_at: Math.floor(Date.now() / 1000),
         kind: 1,
         tags: [
-          ['credential', `30101:${bryncochController.pubkey}:temp-sensor-001`],
+          ['credential', `30301:${bryncochController.pubkey}:temp-sensor-001`],
           ['sensor-type', 'temperature'],
           ['unit', 'celsius'],
         ],
@@ -372,7 +372,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const gatewayCred = createCredentialEvent(
         bryncochController, gateway01.pubkey, schemaRef,
         'gateway', 'bryncoch-gw-01',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-main` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-main` }
       );
       store.saveEvent(gatewayCred);
       log.push(`Gateway provisioned: ${verifier.verify(gatewayCred).status}`);
@@ -381,7 +381,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const sensor1 = createCredentialEvent(
         gateway01, tempSensor01.pubkey, schemaRef,
         'sensor', 'temp-01',
-        { chainRef: `30101:${gateway01.pubkey}:bryncoch-gw-01` }
+        { chainRef: `30301:${gateway01.pubkey}:bryncoch-gw-01` }
       );
       store.saveEvent(sensor1);
       log.push(`Sensor 1 provisioned: ${verifier.verify(sensor1).status}`);
@@ -389,7 +389,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const sensor2 = createCredentialEvent(
         gateway01, tempSensor02.pubkey, schemaRef,
         'sensor', 'temp-02',
-        { chainRef: `30101:${gateway01.pubkey}:bryncoch-gw-01` }
+        { chainRef: `30301:${gateway01.pubkey}:bryncoch-gw-01` }
       );
       store.saveEvent(sensor2);
       log.push(`Sensor 2 provisioned: ${verifier.verify(sensor2).status}`);
@@ -398,7 +398,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       const actuator = createCredentialEvent(
         bryncochController, irrigationActuator.pubkey, schemaRef,
         'actuator', 'irrigation-01',
-        { chainRef: `30101:${bryncochController.pubkey}:bryncoch-main` }
+        { chainRef: `30301:${bryncochController.pubkey}:bryncoch-main` }
       );
       store.saveEvent(actuator);
       log.push(`Actuator provisioned: ${verifier.verify(actuator).status}`);
@@ -433,9 +433,9 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
       );
       store.saveEvent(siteAControllerCred);
       
-      // Different schema for Site B
+      // Different schema for Site B (using relocated kind 30300)
       const siteBRoot = generateKeypair();
-      const siteBSchemaRef = `30100:${siteBRoot.pubkey}:site-b-iot`;
+      const siteBSchemaRef = `30300:${siteBRoot.pubkey}:site-b-iot`;
       const siteBSchema = createSchemaEvent(siteBRoot, 'site-b-iot', iotSchema);
       store.saveEvent(siteBSchema);
       
@@ -446,7 +446,7 @@ describe('Use Case: IoT Device Identity (Bryncoch)', () => {
         siteBSchemaRef, // Wrong schema!
         'sensor',
         'stolen-sensor',
-        { chainRef: `30101:${siteAController.pubkey}:site-a-controller` }
+        { chainRef: `30301:${siteAController.pubkey}:site-a-controller` }
       );
       store.saveEvent(badCred);
       
