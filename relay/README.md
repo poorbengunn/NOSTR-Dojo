@@ -2,107 +2,64 @@
 
 NOSTR relay with NIP-XXX Hierarchical Delegated Credentials support.
 
+## Quick Start
+
+```bash
+cd relay
+npm install
+
+# Terminal 1 - Start relay
+npm run dev
+
+# Terminal 2 - Run CLI client
+npm run cli
+```
+
 ## Features
 
 - Full NIP-01 relay implementation
 - NIP-XXX credential chain verification
 - SQLite storage with WAL mode
-- Credential indexing for fast lookups
-- Schema validation
-- Revocation and renewal handling
+- Interactive CLI for testing
+- Docker support
 
-## Quick Start
+## CLI Commands
 
-```bash
-# Install dependencies
-npm install
-
-# Development mode (hot reload)
-npm run dev
-
-# Production build
-npm run build
-npm start
 ```
-
-## Configuration
-
-Environment variables (`.env`):
-
-```env
-RELAY_PORT=8080
-DB_PATH=./dojo-relay.db
+dojo> schema myschema       # Publish test schema
+dojo> issue admin <pubkey>  # Issue credential  
+dojo> query <pubkey>        # Query credentials
+dojo> schemas               # List all schemas
+dojo> revoke <ref> reason   # Revoke credential
+dojo> pubkey                # Show your pubkey
+dojo> exit
 ```
 
 ## Supported NIPs
 
-- **NIP-01**: Basic protocol flow
-- **NIP-09**: Event deletion
-- **NIP-11**: Relay information
-- **NIP-16**: Event treatment (replaceable)
-- **NIP-20**: Command results
-- **NIP-33**: Parameterized replaceable events
-- **NIP-58**: Badges (base)
-- **NIP-XXX**: Hierarchical Delegated Credentials
+| NIP | Description |
+|-----|-------------|
+| 01 | Basic protocol |
+| 09 | Event deletion |
+| 11 | Relay info |
+| 16 | Replaceable events |
+| 33 | Parameterized replaceable |
+| 58 | Badges (base) |
+| XXX | Hierarchical Credentials |
 
 ## NIP-XXX Event Kinds
 
-| Kind | Name | Description |
-|------|------|-------------|
-| 30100 | Schema Definition | Root authority defines credential tree |
-| 30101 | Credential Grant | Issue credential to recipient |
-| 30102 | Revocation | Invalidate a credential |
-| 30103 | Renewal | Extend credential expiry |
-
-## Usage Example
-
-### 1. Publish a Schema (Root Authority)
-
-```json
-{
-  "kind": 30100,
-  "tags": [
-    ["d", "training-certs-2026"],
-    ["name", "Training Certifications"],
-    ["version", "1.0.0"]
-  ],
-  "content": "{\"classes\":{\"instructor\":{\"name\":\"Instructor\",\"scope\":[\"trainee\"],\"issued_by\":[\"root\"],\"expiry\":{\"max_days\":365,\"renewable\":true},\"cascade_revoke\":false},\"trainee\":{\"name\":\"Trainee\",\"scope\":[],\"issued_by\":[\"instructor\"],\"expiry\":{\"max_days\":730,\"renewable\":false},\"cascade_revoke\":false}}}"
-}
-```
-
-### 2. Issue a Credential
-
-```json
-{
-  "kind": 30101,
-  "tags": [
-    ["d", "cred-001"],
-    ["p", "<recipient-pubkey>"],
-    ["a", "30100:<root-pubkey>:training-certs-2026"],
-    ["class", "instructor"],
-    ["issued", "1737482400"],
-    ["expires", "1769018400"]
-  ],
-  "content": "{\"notes\":\"Certified January 2026\"}"
-}
-```
-
-### 3. Query Credentials
-
-```json
-["REQ", "sub-1", {
-  "kinds": [30101],
-  "#p": ["<recipient-pubkey>"]
-}]
-```
+| Kind | Name |
+|------|------|
+| 30100 | Schema Definition |
+| 30101 | Credential Grant |
+| 30102 | Revocation |
+| 30103 | Renewal |
 
 ## Docker
 
 ```bash
-# Build
-docker build -t dojo-relay ./relay
-
-# Run
+docker build -t dojo-relay .
 docker run -d -p 8080:8080 -v dojo-data:/app/data dojo-relay
 ```
 
@@ -114,23 +71,41 @@ relay/
 │   ├── index.ts       # Entry point
 │   ├── relay.ts       # WebSocket server
 │   ├── database.ts    # SQLite storage
-│   ├── credentials.ts # NIP-XXX verification
+│   ├── credentials.ts # Chain verification
 │   ├── crypto.ts      # Schnorr signatures
+│   ├── cli.ts         # Test client
 │   └── types.ts       # TypeScript types
-├── package.json
-└── tsconfig.json
+└── Dockerfile
 ```
 
-## Verification Algorithm
+## Example: Full Credential Chain
 
-The relay verifies credential chains by:
+```bash
+# 1. Start relay
+npm run dev
 
-1. Checking event signature
-2. Validating against schema
-3. Checking revocation status
-4. Checking expiry (with renewals)
-5. Walking the chain to root authority
-6. Verifying issuer had authority at issuance time
+# 2. In another terminal, start CLI
+npm run cli
+
+# 3. Create schema (you are root authority)
+dojo> schema training
+
+# 4. Issue "admin" credential to someone
+dojo> issue admin abc123...pubkey...
+
+# 5. Query their credentials
+dojo> query abc123...pubkey...
+```
+
+## Verification Flow
+
+1. Signature valid?
+2. Schema exists?
+3. Class exists in schema?
+4. Revoked?
+5. Expired?
+6. Issuer = root? → VALID
+7. Else: walk chain to root, verify each link
 
 ## License
 
