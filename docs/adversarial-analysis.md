@@ -254,4 +254,3 @@ Despite these challenges, the proposal could succeed with substantial revision:
 ---
 
 *Analysis conducted: 2026-01-21*
-*Citadel Sigma · The Forge · T3*
