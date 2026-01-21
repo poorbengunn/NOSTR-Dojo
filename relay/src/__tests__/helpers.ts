@@ -85,7 +85,7 @@ export function buildSchema(classes: Record<string, {
   return { classes: schemaClasses };
 }
 
-// Event builders
+// Event builders - using relocated kinds (30300 series)
 export function createSchemaEvent(
   keypair: Keypair,
   schemaId: string,
@@ -96,7 +96,7 @@ export function createSchemaEvent(
   return signEvent({
     pubkey: keypair.pubkey,
     created_at: now,
-    kind: 30100,
+    kind: 30300,  // Was 30100, relocated to avoid NIP-113 collision
     tags: [
       ['d', schemaId],
       ['name', schemaId],
@@ -137,7 +137,7 @@ export function createCredentialEvent(
   return signEvent({
     pubkey: issuerKeypair.pubkey,
     created_at: now,
-    kind: 30101,
+    kind: 30301,  // Was 30101, relocated to avoid NIP-113 collision
     tags,
     content: JSON.stringify({ notes: 'Test credential' }),
   }, issuerKeypair.privkey);
@@ -153,7 +153,7 @@ export function createRevocationEvent(
   return signEvent({
     pubkey: revokerKeypair.pubkey,
     created_at: now,
-    kind: 30102,
+    kind: 30302,  // Was 30102
     tags: [
       ['a', credentialRef],
       ['reason', reason],
@@ -172,7 +172,7 @@ export function createRenewalEvent(
   return signEvent({
     pubkey: renewerKeypair.pubkey,
     created_at: now,
-    kind: 30103,
+    kind: 30303,  // Was 30103
     tags: [
       ['a', credentialRef],
       ['expires', (now + newExpiryDays * 86400).toString()],

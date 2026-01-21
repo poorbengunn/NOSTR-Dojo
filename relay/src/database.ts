@@ -176,7 +176,7 @@ export class EventStore {
     const dTag = getTagValue(event, 'd');
     if (!dTag) return;
     
-    const ref = `30100:${event.pubkey}:${dTag}`;
+    const ref = `30300:${event.pubkey}:${dTag}`;
     
     this.db.prepare(`
       INSERT OR REPLACE INTO schemas (ref, pubkey, d_tag, content, created_at)
@@ -195,7 +195,7 @@ export class EventStore {
     
     // Parse credential reference
     const parts = aTag.split(':');
-    if (parts.length < 3 || parts[0] !== '30101') return;
+    if (parts.length < 3 || parts[0] !== '30301') return;
     
     const credentialId = parts[2];
     
@@ -216,7 +216,7 @@ export class EventStore {
     if (!aTag || !newExpires) return;
     
     const parts = aTag.split(':');
-    if (parts.length < 3 || parts[0] !== '30101') return;
+    if (parts.length < 3 || parts[0] !== '30301') return;
     
     const credentialId = parts[2];
     const expiresAt = parseInt(newExpires, 10);

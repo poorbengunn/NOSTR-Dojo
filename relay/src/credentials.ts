@@ -109,14 +109,14 @@ export class CredentialVerifier {
     now: number,
     depth: number
   ): VerificationResult {
-    // Prevent infinite loops
-    if (depth > 10) {
-      return { status: 'INVALID', reason: 'chain too deep' };
+    // Prevent infinite loops and DoS - max depth of 5
+    if (depth > 5) {
+      return { status: 'INVALID', reason: 'chain too deep (max 5)' };
     }
     
-    // Parse chain reference (30101:pubkey:d-tag)
+    // Parse chain reference (30301:pubkey:d-tag)
     const chainInfo = parseATag(chainRef);
-    if (!chainInfo || chainInfo.kind !== 30101) {
+    if (!chainInfo || chainInfo.kind !== 30301) {
       return { status: 'INVALID', reason: 'invalid chain reference' };
     }
     

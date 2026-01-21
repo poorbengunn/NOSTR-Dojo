@@ -44,6 +44,7 @@ export interface CredentialContent {
 }
 
 // Event Kinds
+// NOTE: Relocated from 30100-30103 to avoid collision with NIP-113 Activity Events
 export const EVENT_KINDS = {
   // Standard NOSTR
   METADATA: 0,
@@ -57,11 +58,17 @@ export const EVENT_KINDS = {
   BADGE_AWARD: 8,
   PROFILE_BADGES: 30008,
   
-  // NIP-XXX Hierarchical Credentials
-  CREDENTIAL_SCHEMA: 30100,
-  CREDENTIAL_GRANT: 30101,
-  CREDENTIAL_REVOCATION: 30102,
-  CREDENTIAL_RENEWAL: 30103,
+  // NIP-XXX Hierarchical Credentials (Layer 2)
+  CREDENTIAL_SCHEMA: 30300,
+  CREDENTIAL_GRANT: 30301,
+  CREDENTIAL_REVOCATION: 30302,
+  CREDENTIAL_RENEWAL: 30303,
+  
+  // NIP-XXX Access Control (Layer 3) - Reserved
+  RESOURCE_DEFINITION: 30304,
+  ACCESS_POLICY: 30305,
+  TRUST_ENDORSEMENT: 30306,
+  ACCESS_AUDIT: 30307,
 } as const;
 
 // Verification Results

@@ -36,26 +36,39 @@ Root Authority
 
 **Principle:** Authority flows downward. Each level can only issue credentials within its defined scope. Verification walks the chain upward to root.
 
+**Maximum Chain Depth:** 5 levels (to prevent DoS via deep chains).
+
 ---
 
 ## Event Kinds
 
 | Kind | Name | Purpose |
 |------|------|--------|
-| 30100 | Schema Definition | Root defines credential tree |
-| 30101 | Credential Grant | Issue credential to recipient |
-| 30102 | Revocation | Invalidate a credential |
-| 30103 | Renewal | Extend expiry of existing credential |
+| 30300 | Schema Definition | Root defines credential tree |
+| 30301 | Credential Grant | Issue credential to recipient |
+| 30302 | Revocation | Invalidate a credential |
+| 30303 | Renewal | Extend expiry of existing credential |
+
+**Reserved for Access Control Layer:**
+
+| Kind | Name | Purpose |
+|------|------|--------|
+| 30304 | Resource Definition | Define protected resources |
+| 30305 | Access Policy | Define access rules |
+| 30306 | Trust Endorsement | Bridge social graph to credentials |
+| 30307 | Access Audit | Log access attempts (persistent) |
+
+> **Note:** Kinds 30300-30303 were chosen to avoid collision with NIP-113 Activity Events (which uses 30100-30101) and Yakihonne client (which uses 30100 for topic preferences).
 
 ---
 
-## Schema Definition (kind: 30100)
+## Schema Definition (kind: 30300)
 
 Root authority publishes the credential structure:
 
 ```json
 {
-  "kind": 30100,
+  "kind": 30300,
   "pubkey": "<root-authority>",
   "tags": [
     ["d", "<schema-identifier>"],
@@ -135,21 +148,21 @@ Root authority publishes the credential structure:
 
 ---
 
-## Credential Grant (kind: 30101)
+## Credential Grant (kind: 30301)
 
 ```json
 {
-  "kind": 30101,
+  "kind": 30301,
   "pubkey": "<issuer>",
   "created_at": <timestamp>,
   "tags": [
     ["d", "<unique-credential-id>"],
     ["p", "<recipient>"],
-    ["a", "30100:<root>:<schema-id>", "<relay-hint>"],
+    ["a", "30300:<root>:<schema-id>", "<relay-hint>"],
     ["class", "<class-id>"],
     ["issued", "<unix-timestamp>"],
     ["expires", "<unix-timestamp>"] | ["expires", "perpetual"],
-    ["chain", "30101:<upstream-issuer>:<upstream-credential-id>", "<relay-hint>"]
+    ["chain", "30301:<upstream-issuer>:<upstream-credential-id>", "<relay-hint>"]
   ],
   "content": "<optional JSON: restrictions, notes, evidence>"
 }
@@ -179,15 +192,15 @@ Root authority publishes the credential structure:
 
 ---
 
-## Revocation (kind: 30102)
+## Revocation (kind: 30302)
 
 ```json
 {
-  "kind": 30102,
+  "kind": 30302,
   "pubkey": "<revoking-authority>",
   "created_at": <timestamp>,
   "tags": [
-    ["a", "30101:<issuer>:<credential-id>", "<relay-hint>"],
+    ["a", "30301:<issuer>:<credential-id>", "<relay-hint>"],
     ["reason", "<code>"]
   ],
   "content": "<optional explanation>"
@@ -216,21 +229,21 @@ A credential may be revoked by:
 
 If `cascade_revoke: true` in schema, revoking a delegating credential triggers revocation of all downstream credentials. Implementation:
 
-1. Query all kind:30101 where `chain` references revoked credential
-2. Publish kind:30102 for each with reason `upstream`
+1. Query all kind:30301 where `chain` references revoked credential
+2. Publish kind:30302 for each with reason `upstream`
 3. Recurse for any delegating credentials found
 
 ---
 
-## Renewal (kind: 30103)
+## Renewal (kind: 30303)
 
 ```json
 {
-  "kind": 30103,
+  "kind": 30303,
   "pubkey": "<renewing-authority>",
   "created_at": <timestamp>,
   "tags": [
-    ["a", "30101:<original-issuer>:<credential-id>", "<relay-hint>"],
+    ["a", "30301:<original-issuer>:<credential-id>", "<relay-hint>"],
     ["expires", "<new-unix-timestamp>"]
   ],
   "content": "<optional renewal notes>"
@@ -262,11 +275,11 @@ VERIFY(credential) → VALID | INVALID | EXPIRED | REVOKED
 4. Check class exists in schema
 
 5. Check revocation:
-   - Query kind:30102 referencing this credential
+   - Query kind:30302 referencing this credential
    - If found: RETURN REVOKED
 
 6. Check expiry:
-   - Get latest kind:30103 renewal (if any)
+   - Get latest kind:30303 renewal (if any)
    - effective_expiry = renewal.expires OR credential.expires
    - If effective_expiry < now AND effective_expiry != "perpetual":
      RETURN EXPIRED
@@ -281,6 +294,7 @@ VERIFY(credential) → VALID | INVALID | EXPIRED | REVOKED
      - Check issuer's credential was valid at issuance time:
        - issuer_credential.issued <= credential.issued
        - issuer_credential.expires >= credential.issued (or perpetual)
+     - Check chain depth <= 5 (DoS protection)
      - RETURN VERIFY(issuer_credential)  // recurse
 ```
 
@@ -323,20 +337,21 @@ Critical: A credential is valid if the issuer held valid authority **at the mome
 | Schema tampering | Replaceable event; clients pin trusted version |
 | Chain forgery | Full chain verification to root |
 | Time manipulation | Relay timestamps; client sanity checks |
+| DoS via deep chains | Maximum chain depth of 5 |
 
 ---
 
 ## Backward Compatibility
 
-- New event kinds; no conflict with NIP-58
-- Clients unaware of 30100-30103 ignore them
+- New event kinds; no conflict with NIP-58 or NIP-113
+- Clients unaware of 30300-30303 ignore them
 - Credentials function as enhanced badges for legacy clients
 
 ---
 
 ## Reference Implementation
 
-See `/lib` directory in this repository.
+See `/relay` directory in this repository.
 
 ---
 
