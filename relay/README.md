@@ -8,29 +8,94 @@ NOSTR relay with NIP-XXX Hierarchical Delegated Credentials support.
 cd relay
 npm install
 
-# Terminal 1 - Start relay
+# Start relay
 npm run dev
 
-# Terminal 2 - Run CLI client
+# Run CLI client (separate terminal)
 npm run cli
+
+# Run tests
+npm test
 ```
 
-## Features
+## Test Suite
 
-- Full NIP-01 relay implementation
-- NIP-XXX credential chain verification
-- SQLite storage with WAL mode
-- Interactive CLI for testing
-- Docker support
+Comprehensive test infrastructure with use-case-driven scenarios:
+
+```bash
+npm test                  # Run all tests
+npm run test:watch        # Watch mode
+npm run test:coverage     # Coverage report
+npm run test:training     # Training credentials only
+npm run test:iot          # IoT identity only
+```
+
+### Test Structure
+
+```
+src/__tests__/
+├── helpers.ts                    # Test utilities, event builders
+├── crypto.test.ts                # Unit: signature verification
+├── usecase.training.test.ts      # Use case: Dojo training certs
+└── usecase.iot.test.ts           # Use case: IoT device identity
+```
+
+### Use Case: Training Credentials (The Dojo)
+
+Tests the Lyceum/Praxis training hierarchy:
+
+```
+Citadel (root)
+  └─ Course Director (Sean - Director of Praxis)
+       └─ Instructor (Alice)
+            └─ Trainee (Bob)
+```
+
+**Scenarios:**
+- ✅ Root issues Course Director credential
+- ✅ Course Director issues Instructor credential  
+- ✅ Instructor issues Trainee credential
+- ✅ Full 3-level chain verification
+- ❌ Trainee cannot issue (no scope)
+- ❌ Instructor cannot issue Course Director (out of scope)
+- ❌ Expired credential rejection
+- ❌ Issuer expired at issuance time
+- ✅ Credential renewal extends validity
+- ❌ Revoked credential rejection
+- ✅ Root can revoke any credential in chain
+
+### Use Case: IoT Device Identity (Bryncoch)
+
+Tests device provisioning for site management:
+
+```
+Citadel (root)
+  └─ Site Controller (Bryncoch)
+       ├─ Gateway (local hub)
+       │    ├─ Sensor (temperature)
+       │    └─ Sensor (humidity)
+       └─ Actuator (irrigation)
+```
+
+**Scenarios:**
+- ✅ Root provisions Site Controller
+- ✅ Controller provisions sensors directly
+- ✅ Controller → Gateway → Sensor chain
+- ❌ Sensor cannot provision other devices
+- ❌ Gateway cannot issue site-controller
+- ❌ Rogue device without credentials
+- ✅ Device replacement (revoke + reissue)
+- ✅ Sensor data attestation pattern
+- ❌ Cross-site credential rejection
 
 ## CLI Commands
 
 ```
-dojo> schema myschema       # Publish test schema
-dojo> issue admin <pubkey>  # Issue credential  
-dojo> query <pubkey>        # Query credentials
+dojo> schema <id>           # Publish test schema
+dojo> issue <class> <pk>    # Issue credential  
+dojo> query <pk>            # Query credentials
 dojo> schemas               # List all schemas
-dojo> revoke <ref> reason   # Revoke credential
+dojo> revoke <ref> <reason> # Revoke credential
 dojo> pubkey                # Show your pubkey
 dojo> exit
 ```
@@ -56,6 +121,24 @@ dojo> exit
 | 30102 | Revocation |
 | 30103 | Renewal |
 
+## Architecture
+
+```
+relay/
+├── src/
+│   ├── index.ts           # Entry point
+│   ├── relay.ts           # WebSocket server
+│   ├── database.ts        # SQLite storage
+│   ├── credentials.ts     # Chain verification
+│   ├── crypto.ts          # Schnorr signatures
+│   ├── types.ts           # TypeScript types
+│   ├── cli.ts             # Test client
+│   └── __tests__/         # Test suite
+├── vitest.config.ts
+├── Dockerfile
+└── package.json
+```
+
 ## Docker
 
 ```bash
@@ -63,49 +146,17 @@ docker build -t dojo-relay .
 docker run -d -p 8080:8080 -v dojo-data:/app/data dojo-relay
 ```
 
-## Architecture
-
-```
-relay/
-├── src/
-│   ├── index.ts       # Entry point
-│   ├── relay.ts       # WebSocket server
-│   ├── database.ts    # SQLite storage
-│   ├── credentials.ts # Chain verification
-│   ├── crypto.ts      # Schnorr signatures
-│   ├── cli.ts         # Test client
-│   └── types.ts       # TypeScript types
-└── Dockerfile
-```
-
-## Example: Full Credential Chain
-
-```bash
-# 1. Start relay
-npm run dev
-
-# 2. In another terminal, start CLI
-npm run cli
-
-# 3. Create schema (you are root authority)
-dojo> schema training
-
-# 4. Issue "admin" credential to someone
-dojo> issue admin abc123...pubkey...
-
-# 5. Query their credentials
-dojo> query abc123...pubkey...
-```
-
-## Verification Flow
+## Verification Algorithm
 
 1. Signature valid?
 2. Schema exists?
 3. Class exists in schema?
-4. Revoked?
-5. Expired?
-6. Issuer = root? → VALID
-7. Else: walk chain to root, verify each link
+4. Revoked? (check kind:30102)
+5. Expired? (check renewals kind:30103)
+6. Issuer = root? → **VALID**
+7. Else: walk chain to root
+   - Each link: issuer had valid credential at issuance time
+   - Each link: issuer's class has scope to issue this class
 
 ## License
 
