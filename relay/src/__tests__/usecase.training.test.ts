@@ -1,8 +1,8 @@
 /**
- * USE CASE: Training Credentials (The Dojo / Lyceum)
+ * USE CASE: Training Credentials
  * 
  * Hierarchy:
- *   Citadel (root)
+ *   Organization (root)
  *     └─ Course Director (can issue: Instructor)
  *          └─ Instructor (can issue: Trainee)
  *               └─ Trainee (terminal)
@@ -34,19 +34,19 @@ import {
 } from './helpers.js';
 import * as fs from 'fs';
 
-describe('Use Case: Training Credentials (The Dojo)', () => {
+describe('Use Case: Training Credentials', () => {
   let store: EventStore;
   let verifier: CredentialVerifier;
   
   // Actors
-  let citadel: Keypair;      // Root authority
-  let sean: Keypair;         // Course Director (Director of Praxis)
+  let orgRoot: Keypair;      // Root authority
+  let director: Keypair;     // Course Director
   let alice: Keypair;        // Instructor
   let bob: Keypair;          // Trainee
   let mallory: Keypair;      // Unauthorized actor
   
   // Schema
-  const SCHEMA_ID = 'dojo-training-2026';
+  const SCHEMA_ID = 'training-creds-2026';
   let schemaRef: string;
   
   const trainingSchema = buildSchema({
@@ -78,27 +78,27 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
   
   beforeEach(() => {
     // Fresh database for each test
-    const dbPath = `./test-dojo-${Date.now()}.db`;
+    const dbPath = `./test-training-${Date.now()}.db`;
     store = new EventStore(dbPath);
     verifier = new CredentialVerifier(store);
     
     // Generate actors
-    citadel = generateKeypair();
-    sean = generateKeypair();
+    orgRoot = generateKeypair();
+    director = generateKeypair();
     alice = generateKeypair();
     bob = generateKeypair();
     mallory = generateKeypair();
     
     // Publish schema (using relocated kind 30300)
-    schemaRef = `30300:${citadel.pubkey}:${SCHEMA_ID}`;
-    const schemaEvent = createSchemaEvent(citadel, SCHEMA_ID, trainingSchema);
+    schemaRef = `30300:${orgRoot.pubkey}:${SCHEMA_ID}`;
+    const schemaEvent = createSchemaEvent(orgRoot, SCHEMA_ID, trainingSchema);
     store.saveEvent(schemaEvent);
   });
   
   afterEach(() => {
     store.close();
     // Cleanup test databases
-    const files = fs.readdirSync('.').filter(f => f.startsWith('test-dojo-') && f.endsWith('.db'));
+    const files = fs.readdirSync('.').filter(f => f.startsWith('test-training-') && f.endsWith('.db'));
     files.forEach(f => {
       try { fs.unlinkSync(f); } catch {}
       try { fs.unlinkSync(f + '-wal'); } catch {}
@@ -107,13 +107,13 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
   });
   
   describe('Happy Path: Full Chain Issuance', () => {
-    it('Citadel issues Course Director credential to Sean', () => {
+    it('Organization issues Course Director credential', () => {
       const cred = createCredentialEvent(
-        citadel,
-        sean.pubkey,
+        orgRoot,
+        director.pubkey,
         schemaRef,
         'course-director',
-        'sean-director-2026',
+        'director-2026',
         { expiryDays: 365 }
       );
       
@@ -126,28 +126,28 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       }
     });
     
-    it('Sean (Course Director) issues Instructor credential to Alice', () => {
-      // First: Sean needs his Course Director credential
-      const seanCred = createCredentialEvent(
-        citadel,
-        sean.pubkey,
+    it('Course Director issues Instructor credential to Alice', () => {
+      // First: Director needs their Course Director credential
+      const directorCred = createCredentialEvent(
+        orgRoot,
+        director.pubkey,
         schemaRef,
         'course-director',
-        'sean-director-2026',
+        'director-2026',
         { expiryDays: 365 }
       );
-      store.saveEvent(seanCred);
+      store.saveEvent(directorCred);
       
-      // Now Sean can issue to Alice (using relocated kind 30301)
+      // Now Director can issue to Alice (using relocated kind 30301)
       const aliceCred = createCredentialEvent(
-        sean,
+        director,
         alice.pubkey,
         schemaRef,
         'instructor',
         'alice-instructor-2026',
         {
           expiryDays: 365,
-          chainRef: `30301:${sean.pubkey}:sean-director-2026`,
+          chainRef: `30301:${director.pubkey}:director-2026`,
         }
       );
       store.saveEvent(aliceCred);
@@ -160,16 +160,16 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       }
     });
     
-    it('Alice (Instructor) issues Trainee credential to Bob', () => {
-      // Setup chain: Citadel → Sean → Alice
-      const seanCred = createCredentialEvent(
-        citadel, sean.pubkey, schemaRef, 'course-director', 'sean-director-2026'
+    it('Instructor issues Trainee credential to Bob', () => {
+      // Setup chain: Root → Director → Alice
+      const directorCred = createCredentialEvent(
+        orgRoot, director.pubkey, schemaRef, 'course-director', 'director-2026'
       );
-      store.saveEvent(seanCred);
+      store.saveEvent(directorCred);
       
       const aliceCred = createCredentialEvent(
-        sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
+        director, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
+        { chainRef: `30301:${director.pubkey}:director-2026` }
       );
       store.saveEvent(aliceCred);
       
@@ -199,14 +199,14 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
   describe('Authorization Enforcement', () => {
     it('REJECTS: Trainee cannot issue credentials (no scope)', () => {
       // Setup full chain to Bob
-      const seanCred = createCredentialEvent(
-        citadel, sean.pubkey, schemaRef, 'course-director', 'sean-director-2026'
+      const directorCred = createCredentialEvent(
+        orgRoot, director.pubkey, schemaRef, 'course-director', 'director-2026'
       );
-      store.saveEvent(seanCred);
+      store.saveEvent(directorCred);
       
       const aliceCred = createCredentialEvent(
-        sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
+        director, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
+        { chainRef: `30301:${director.pubkey}:director-2026` }
       );
       store.saveEvent(aliceCred);
       
@@ -236,15 +236,15 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
     });
     
     it('REJECTS: Instructor cannot issue Course Director (out of scope)', () => {
-      // Setup: Sean → Alice
-      const seanCred = createCredentialEvent(
-        citadel, sean.pubkey, schemaRef, 'course-director', 'sean-director-2026'
+      // Setup: Director → Alice
+      const directorCred = createCredentialEvent(
+        orgRoot, director.pubkey, schemaRef, 'course-director', 'director-2026'
       );
-      store.saveEvent(seanCred);
+      store.saveEvent(directorCred);
       
       const aliceCred = createCredentialEvent(
-        sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
+        director, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
+        { chainRef: `30301:${director.pubkey}:director-2026` }
       );
       store.saveEvent(aliceCred);
       
@@ -285,11 +285,11 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
   describe('Expiry Handling', () => {
     it('REJECTS: Expired credential', () => {
       const expiredCred = createCredentialEvent(
-        citadel,
-        sean.pubkey,
+        orgRoot,
+        director.pubkey,
         schemaRef,
         'course-director',
-        'sean-expired',
+        'director-expired',
         {
           expiryDays: -30, // Expired 30 days ago
           timestamp: daysAgo(60), // Issued 60 days ago
@@ -306,11 +306,11 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       // Issue credential that would be expired
       const now = Math.floor(Date.now() / 1000);
       const cred = createCredentialEvent(
-        citadel,
-        sean.pubkey,
+        orgRoot,
+        director.pubkey,
         schemaRef,
         'course-director',
-        'sean-renewed',
+        'director-renewed',
         {
           expiryDays: 30,
           timestamp: daysAgo(60), // Issued 60 days ago, expired 30 days ago
@@ -320,8 +320,8 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       
       // Renew it (using relocated kind 30301 in reference)
       const renewal = createRenewalEvent(
-        citadel,
-        `30301:${citadel.pubkey}:sean-renewed`,
+        orgRoot,
+        `30301:${orgRoot.pubkey}:director-renewed`,
         365, // New expiry: 365 days from now
         now
       );
@@ -333,30 +333,30 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
     });
     
     it('REJECTS: Issuer credential expired at time of issuance', () => {
-      // Sean's credential expired before he issued to Alice
-      const seanCred = createCredentialEvent(
-        citadel,
-        sean.pubkey,
+      // Director's credential expired before they issued to Alice
+      const directorCred = createCredentialEvent(
+        orgRoot,
+        director.pubkey,
         schemaRef,
         'course-director',
-        'sean-short-lived',
+        'director-short-lived',
         {
           expiryDays: 30,
           timestamp: daysAgo(60), // Issued 60 days ago, expired 30 days ago
         }
       );
-      store.saveEvent(seanCred);
+      store.saveEvent(directorCred);
       
-      // Sean tries to issue after his credential expired
+      // Director tries to issue after their credential expired
       const aliceCred = createCredentialEvent(
-        sean,
+        director,
         alice.pubkey,
         schemaRef,
         'instructor',
         'alice-invalid',
         {
-          chainRef: `30301:${sean.pubkey}:sean-short-lived`,
-          timestamp: daysAgo(10), // Issued 10 days ago (after Sean's expired)
+          chainRef: `30301:${director.pubkey}:director-short-lived`,
+          timestamp: daysAgo(10), // Issued 10 days ago (after Director's expired)
         }
       );
       store.saveEvent(aliceCred);
@@ -373,18 +373,18 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
   describe('Revocation', () => {
     it('REJECTS: Revoked credential', () => {
       const cred = createCredentialEvent(
-        citadel,
-        sean.pubkey,
+        orgRoot,
+        director.pubkey,
         schemaRef,
         'course-director',
-        'sean-revoked'
+        'director-revoked'
       );
       store.saveEvent(cred);
       
       // Revoke it (using relocated kind 30301 in reference)
       const revocation = createRevocationEvent(
-        citadel,
-        `30301:${citadel.pubkey}:sean-revoked`,
+        orgRoot,
+        `30301:${orgRoot.pubkey}:director-revoked`,
         'misconduct'
       );
       store.saveEvent(revocation);
@@ -399,21 +399,21 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
     
     it('Root can revoke any credential in chain', () => {
       // Full chain
-      const seanCred = createCredentialEvent(
-        citadel, sean.pubkey, schemaRef, 'course-director', 'sean-director-2026'
+      const directorCred = createCredentialEvent(
+        orgRoot, director.pubkey, schemaRef, 'course-director', 'director-2026'
       );
-      store.saveEvent(seanCred);
+      store.saveEvent(directorCred);
       
       const aliceCred = createCredentialEvent(
-        sean, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
-        { chainRef: `30301:${sean.pubkey}:sean-director-2026` }
+        director, alice.pubkey, schemaRef, 'instructor', 'alice-instructor-2026',
+        { chainRef: `30301:${director.pubkey}:director-2026` }
       );
       store.saveEvent(aliceCred);
       
       // Root revokes Alice's credential directly
       const revocation = createRevocationEvent(
-        citadel,
-        `30301:${sean.pubkey}:alice-instructor-2026`,
+        orgRoot,
+        `30301:${director.pubkey}:alice-instructor-2026`,
         'fraud'
       );
       store.saveEvent(revocation);
@@ -428,17 +428,17 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
     it('Complete course certification flow', () => {
       const results: string[] = [];
       
-      // 1. Citadel appoints Sean as Course Director
-      const seanDirector = createCredentialEvent(
-        citadel, sean.pubkey, schemaRef, 'course-director', 'sean-cd-001'
+      // 1. Organization appoints Director
+      const directorCred = createCredentialEvent(
+        orgRoot, director.pubkey, schemaRef, 'course-director', 'director-001'
       );
-      store.saveEvent(seanDirector);
-      results.push(`Sean appointed as Course Director: ${verifier.verify(seanDirector).status}`);
+      store.saveEvent(directorCred);
+      results.push(`Director appointed: ${verifier.verify(directorCred).status}`);
       
-      // 2. Sean certifies Alice as Instructor
+      // 2. Director certifies Alice as Instructor
       const aliceInstructor = createCredentialEvent(
-        sean, alice.pubkey, schemaRef, 'instructor', 'alice-inst-001',
-        { chainRef: `30301:${sean.pubkey}:sean-cd-001` }
+        director, alice.pubkey, schemaRef, 'instructor', 'alice-inst-001',
+        { chainRef: `30301:${director.pubkey}:director-001` }
       );
       store.saveEvent(aliceInstructor);
       results.push(`Alice certified as Instructor: ${verifier.verify(aliceInstructor).status}`);
@@ -457,7 +457,7 @@ describe('Use Case: Training Credentials (The Dojo)', () => {
       
       // All should be valid
       expect(results).toEqual([
-        'Sean appointed as Course Director: VALID',
+        'Director appointed: VALID',
         'Alice certified as Instructor: VALID',
         'Bob certified as Trainee: VALID',
         'Bob has 1 credential(s)',
